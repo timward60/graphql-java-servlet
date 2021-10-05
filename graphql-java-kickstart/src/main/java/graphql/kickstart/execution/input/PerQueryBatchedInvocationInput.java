@@ -7,6 +7,8 @@ import graphql.kickstart.execution.context.ContextSetting;
 import graphql.kickstart.execution.context.GraphQLContext;
 import graphql.schema.GraphQLSchema;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import lombok.Getter;
@@ -22,13 +24,16 @@ public class PerQueryBatchedInvocationInput implements GraphQLBatchedInvocationI
       List<GraphQLRequest> requests,
       GraphQLSchema schema,
       Supplier<GraphQLContext> contextSupplier,
+      Function<GraphQLContext, Map<?, Object>> graphqlContextSupplier,
       Object root,
       ContextSetting contextSetting) {
+    GraphQLContext context = contextSupplier.get();
+    Map<?, Object> graphqlContext = graphqlContextSupplier.apply(context);
     invocationInputs =
         requests.stream()
             .map(
                 request ->
-                    new GraphQLSingleInvocationInput(request, schema, contextSupplier.get(), root))
+                    new GraphQLSingleInvocationInput(request, schema, context, graphqlContext, root))
             .collect(Collectors.toList());
     this.contextSetting = contextSetting;
   }

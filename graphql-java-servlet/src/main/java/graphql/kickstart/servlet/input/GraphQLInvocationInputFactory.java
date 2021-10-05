@@ -3,6 +3,8 @@ package graphql.kickstart.servlet.input;
 import graphql.kickstart.execution.GraphQLRequest;
 import graphql.kickstart.execution.config.GraphQLSchemaProvider;
 import graphql.kickstart.execution.context.ContextSetting;
+import graphql.kickstart.execution.context.GraphQLContext;
+import graphql.kickstart.execution.context.GraphQLContextBuilder;
 import graphql.kickstart.execution.input.GraphQLBatchedInvocationInput;
 import graphql.kickstart.execution.input.GraphQLSingleInvocationInput;
 import graphql.kickstart.execution.subscriptions.GraphQLSubscriptionInvocationInputFactory;
@@ -15,6 +17,7 @@ import graphql.kickstart.servlet.core.DefaultGraphQLRootObjectBuilder;
 import graphql.kickstart.servlet.core.GraphQLServletRootObjectBuilder;
 import graphql.schema.GraphQLSchema;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -80,10 +83,14 @@ public class GraphQLInvocationInputFactory implements GraphQLSubscriptionInvocat
   }
 
   public GraphQLSingleInvocationInput create(GraphQLRequest graphQLRequest) {
+    GraphQLContextBuilder contextBuilder = contextBuilderSupplier.get();
+    GraphQLContext context = contextBuilder.build();
+    Map<Object, Object> graphqlContext = contextBuilder.build(context);
     return new GraphQLSingleInvocationInput(
         graphQLRequest,
         schemaProviderSupplier.get().getSchema(),
-        contextBuilderSupplier.get().build(),
+        context,
+        graphqlContext,
         rootObjectBuilderSupplier.get().build());
   }
 
@@ -92,12 +99,16 @@ public class GraphQLInvocationInputFactory implements GraphQLSubscriptionInvocat
       HttpServletRequest request,
       HttpServletResponse response,
       boolean readOnly) {
+    GraphQLServletContextBuilder contextBuilder = contextBuilderSupplier.get();
+    Map<Object, Object> graphqlContext = contextBuilder.buildGraphQLContext(request, response);
+    GraphQLContext context = (GraphQLContext) graphqlContext.get(GraphQLContext.class);
     return new GraphQLSingleInvocationInput(
         graphQLRequest,
         readOnly
             ? schemaProviderSupplier.get().getReadOnlySchema(request)
             : schemaProviderSupplier.get().getSchema(request),
-        contextBuilderSupplier.get().build(request, response),
+        context,
+        graphqlContext,
         rootObjectBuilderSupplier.get().build(request));
   }
 
@@ -113,6 +124,7 @@ public class GraphQLInvocationInputFactory implements GraphQLSubscriptionInvocat
             ? schemaProviderSupplier.get().getReadOnlySchema(request)
             : schemaProviderSupplier.get().getSchema(request),
         () -> contextBuilderSupplier.get().build(request, response),
+        (context) -> contextBuilderSupplier.get().build(context),
         rootObjectBuilderSupplier.get().build(request));
   }
 
@@ -121,10 +133,14 @@ public class GraphQLInvocationInputFactory implements GraphQLSubscriptionInvocat
       GraphQLRequest graphQLRequest, SubscriptionSession session) {
     HandshakeRequest request =
         (HandshakeRequest) session.getUserProperties().get(HandshakeRequest.class.getName());
+    GraphQLServletContextBuilder contextBuilder = contextBuilderSupplier.get();
+    Map<Object, Object> graphqlContext = contextBuilder.buildGraphQLContext((Session) session.unwrap(), request);
+    GraphQLContext context = (GraphQLContext) graphqlContext.get(GraphQLContext.class);
     return new GraphQLSingleInvocationInput(
         graphQLRequest,
         schemaProviderSupplier.get().getSchema(request),
-        contextBuilderSupplier.get().build((Session) session.unwrap(), request),
+        context,
+        graphqlContext,
         rootObjectBuilderSupplier.get().build(request));
   }
 
@@ -136,6 +152,7 @@ public class GraphQLInvocationInputFactory implements GraphQLSubscriptionInvocat
         graphQLRequest,
         schemaProviderSupplier.get().getSchema(request),
         () -> contextBuilderSupplier.get().build(session, request),
+        (context) -> contextBuilderSupplier.get().build(context),
         rootObjectBuilderSupplier.get().build(request));
   }
 

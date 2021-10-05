@@ -8,6 +8,7 @@ import graphql.kickstart.execution.GraphQLRequest;
 import graphql.kickstart.execution.context.GraphQLContext;
 import graphql.schema.GraphQLSchema;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.security.auth.Subject;
 
@@ -21,9 +22,9 @@ public class GraphQLSingleInvocationInput implements GraphQLInvocationInput {
   private final Subject subject;
 
   public GraphQLSingleInvocationInput(
-      GraphQLRequest request, GraphQLSchema schema, GraphQLContext context, Object root) {
+      GraphQLRequest request, GraphQLSchema schema, GraphQLContext context, Map<?, Object> graphqlContext, Object root) {
     this.schema = schema;
-    this.executionInput = createExecutionInput(request, context, root);
+    this.executionInput = createExecutionInput(request, context, graphqlContext, root);
     subject = context.getSubject().orElse(null);
   }
 
@@ -38,11 +39,12 @@ public class GraphQLSingleInvocationInput implements GraphQLInvocationInput {
   }
 
   private ExecutionInput createExecutionInput(
-      GraphQLRequest graphQLRequest, GraphQLContext context, Object root) {
+      GraphQLRequest graphQLRequest, GraphQLContext context, Map<?, Object> graphqlContext, Object root) {
     return ExecutionInput.newExecutionInput()
         .query(graphQLRequest.getQuery())
         .operationName(graphQLRequest.getOperationName())
         .context(context)
+        .graphQLContext(graphqlContext)
         .root(root)
         .variables(graphQLRequest.getVariables())
         .extensions(graphQLRequest.getExtensions())

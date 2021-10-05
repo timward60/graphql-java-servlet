@@ -15,6 +15,8 @@ import graphql.kickstart.execution.instrumentation.RequestLevelTrackingApproach;
 import graphql.schema.GraphQLSchema;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.dataloader.DataLoaderRegistry;
@@ -41,6 +43,8 @@ public enum ContextSetting {
    * @param schema the GraphQL schema to execute the requests against.
    * @param contextSupplier method that returns the context to use for each execution or for the
    *     request as a whole.
+   * @param graphqlContextSupplier method that returns the GraphQL context to use for each
+   *                               execution or for the request as a whole.
    * @param root the root object to use for each execution.
    * @return a configured batch input.
    */
@@ -48,16 +52,17 @@ public enum ContextSetting {
       List<GraphQLRequest> requests,
       GraphQLSchema schema,
       Supplier<GraphQLContext> contextSupplier,
+      Function<GraphQLContext, Map<?, Object>> graphqlContextSupplier,
       Object root) {
     switch (this) {
       case PER_QUERY_WITH_INSTRUMENTATION:
         // Intentional fallthrough
       case PER_QUERY_WITHOUT_INSTRUMENTATION:
-        return new PerQueryBatchedInvocationInput(requests, schema, contextSupplier, root, this);
+        return new PerQueryBatchedInvocationInput(requests, schema, contextSupplier, graphqlContextSupplier, root, this);
       case PER_REQUEST_WITHOUT_INSTRUMENTATION:
         // Intentional fallthrough
       case PER_REQUEST_WITH_INSTRUMENTATION:
-        return new PerRequestBatchedInvocationInput(requests, schema, contextSupplier, root, this);
+        return new PerRequestBatchedInvocationInput(requests, schema, contextSupplier, graphqlContextSupplier, root, this);
       default:
         throw new ContextSettingNotConfiguredException();
     }
